@@ -8,19 +8,21 @@ struct text
     };
 
 /// @brief Вычисляет размер файла и кладет его в buf_size, выделяет память под буфер buf и заполняет его символами из файла.
-/// @param buf_p Указатель на буфер символов.
-/// @param buf_size_p Указатель на размер буфера.
+/// @param text_p указатель на структуру text.
 /// @param file_name Название файла.
 /// @return Указатель на буфер.
-char *make_buf(char **buf_p, size_t *buf_size_p, const char *file_name);
-
-/// @brief Вычисляет количество символов в файле с учетом всех символов разделителей.
-/// @param fp Указатель на файл.
-/// @return Количество символов в файле.
-size_t file_size(FILE *fp);
+char *make_buf(text *text_p, const char *file_name);
 
 /// @brief Заполняет буфер символами из файла.
 /// @param buf_p Указатель на буфер символов.
 /// @param fp Указатель на файл.
 /// @return Указатель на буфер.
 char *fill_buf(char *buf_p, FILE *fp);
+
+char **make_lines_ptr(text *text_p);
+
+char **fill_line_buf(text *text_p);
+
+size_t print_text(text* text_p);
+
+size_t text_to_file(text* text_p, const char* file_name);
