@@ -6,18 +6,18 @@ size_t file_size(FILE *fp)
     {
     assert(fp != NULL);
 
-    struct stat sb;
+    struct stat sb = {0};
     int fd = fileno(fp);
 
     if (fstat(fd, &sb) == -1)
         {
-        return 0;
+        return -1;
         }
 
     return sb.st_size;
     }
 
-size_t lines_count(char *buf)
+size_t lines_count(const char *buf)
     {
     assert(buf != 0);
 
@@ -31,7 +31,7 @@ size_t lines_count(char *buf)
             }
         }
 
-    return count + 1;
+    return count;
     }
 
 size_t strlen( const char *str )

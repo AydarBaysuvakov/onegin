@@ -1,14 +1,17 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include "iotext.h"
 #include "sort.h"
 
 int main()
     {
-    text onegin = {nullptr, 0, nullptr, 0};
+    Text onegin = {nullptr, 0, nullptr, 0};
     const char *file_name = "Onegin.txt";
-    make_buf(&onegin, file_name);
-    make_lines_ptr(&onegin);
-    linesort(onegin.lines, onegin.line_count - 1, linecmp);
+    text_ctor(&onegin, file_name);
+
+    sort_lines((void **) onegin.lines, onegin.n_lines, sizeof(onegin.lines), linecmp);
     print_text(&onegin);
-    text_to_file(&onegin, "out.txt");
+    print_text(&onegin, "out.txt");
+
+    text_dtor(&onegin);
     }

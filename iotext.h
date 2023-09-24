@@ -1,28 +1,48 @@
+#ifndef __IOTEXT__
+#define __IOTEXT__
+
 /// @brief Структура элементов текста.
-struct text
+struct Text
     {
     char * buf;         //!< Указатель на буфер.
     size_t buf_size;    //!< Размер буфера.
     char ** lines;      //!< Массив указателей на начала строк.
-    size_t line_count;  //!< Количество строк в тексте.
+    size_t n_lines;     //!< Количество строк в тексте.
     };
 
+enum error_t
+    {
+    OK                    = 0,
+    FILE_ERROR            = 1,
+    ALLOCATION_ERROR      = 2,
+    BUFFER_OVERFLOW_ERROR = 3,
+    CALCULATION_ERROR     = 4
+    };
+
+const int EMPTY = 0;
+
+error_t text_ctor(Text *text, const char *file_name);
+
+error_t text_dtor(Text *text);
+
 /// @brief Вычисляет размер файла и кладет его в buf_size, выделяет память под буфер buf и заполняет его символами из файла.
-/// @param text_p указатель на структуру text.
+/// @param text указатель на структуру text.
 /// @param file_name Название файла.
-/// @return Указатель на буфер.
-char *make_buf(text *text_p, const char *file_name);
+/// @return Код ошибки.
+error_t make_buf(Text *text, const char *file_name);
 
 /// @brief Заполняет буфер символами из файла.
-/// @param buf_p Указатель на буфер символов.
+/// @param buf Указатель на буфер символов.
 /// @param fp Указатель на файл.
-/// @return Указатель на буфер.
-char *fill_buf(char *buf_p, FILE *fp);
+/// @return Код ошибки.
+error_t fill_buf(char *buf, size_t buf_size, FILE *fp);
 
-char **make_lines_ptr(text *text_p);
+error_t lines_partition(Text *text);
 
-char **fill_line_buf(text *text_p);
+error_t fill_lines(Text *text);
 
-size_t print_text(text* text_p);
+error_t text_to_file(Text* text, FILE* fp = stdout);
 
-size_t text_to_file(text* text_p, const char* file_name);
+error_t print_text(Text* text, const char* file_name = NULL);
+
+#endif //__IOTEXT__

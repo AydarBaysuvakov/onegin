@@ -3,105 +3,124 @@
 #include <stdlib.h>
 #include "iotext.h"
 #include "count.h"
-//reading
-//linecount
-//qsort
 
-char *make_buf(text *text_p, const char *file_name)
+error_t text_ctor(Text *text, const char *file_name)
     {
-    assert(text_p != NULL);
+    assert(text != NULL);
+
+    make_buf(text, file_name);
+    lines_partition(text);
+
+    return OK;
+    }
+
+error_t text_dtor(Text *text)
+    {
+    assert(text != NULL);
+
+    free(text->buf);
+    free(text->lines);
+
+    text->buf_size = EMPTY;
+    text->n_lines = EMPTY;
+
+    return OK;
+    }
+
+error_t make_buf(Text *text, const char *file_name)
+    {
+    assert(text      != NULL);
     assert(file_name != NULL);
 
-    // Открываем файл.
     FILE *fp = fopen(file_name, "r");
-    //assert(fp != nullptr);
-    if (fp == nullptr)
+    if (fp == NULL)
         {
-        printf("ERROR: cannot open file");
-        return nullptr;
+        perror("ERROR: cannot open file");
+        return FILE_ERROR;
         }
 
-    // Количество символов в файле.
-    if (!(text_p->buf_size = file_size(fp)))
+    text->buf_size = file_size(fp);
+    if (text->buf_size == -1) // windows fopen('r') \n \r ========!!!!
         {
-        printf("ERROR: cannot open file");
-        return nullptr;
+        perror("ERROR: fstat() func returned -1");
+        return FILE_ERROR;
         }
 
-    // Освобождаем буффер, если он занят, выделяем под него память.
-    if (text_p->buf != nullptr)
+    text->buf = (char*) malloc((text->buf_size + 1) * sizeof(char));
+    if (text->buf == nullptr)
         {
-        free(text_p->buf);
-        }
-    text_p->buf = (char*) malloc((text_p->buf_size + 1) * sizeof(char));
-    if (text_p->buf == nullptr)
-        {
-        printf("ERROR: cannot allocate memory");
-        free(text_p->buf);
-        return nullptr;
+        perror("ERROR: cannot allocate memory");
+        return ALLOCATION_ERROR;
         }
 
-    // Заполняем буфер символами.
-    text_p->buf = fill_buf(text_p->buf, fp);
+    if (fill_buf(text->buf, text->buf_size, fp))
+        {
+        perror("ERROR: buffer overflow");
+        return BUFFER_OVERFLOW_ERROR;
+        }
 
-    // Закрываем файл.
-    fclose(fp);
+    if (fclose(fp) == EOF)
+        {
+        perror("ERROR: cannot close file");
+        return FILE_ERROR;
+        }
 
-    return text_p->buf;
+    return OK;
     }
 
-char *fill_buf(char *buf_p, FILE *fp)
+error_t fill_buf(char *buf, size_t buf_size, FILE *fp)
     {
-    assert(fp != NULL);
+    assert(fp  != NULL);
+    assert(buf != NULL);
 
-    char *buf_copy = buf_p;
-    char c = fgetc(fp);
+    fread(buf, sizeof(*buf), buf_size, fp);
 
-    while (c != EOF)
-        {
-        *buf_p++ = c;
-        c = fgetc(fp);
-        }
-
-    return buf_copy;
+    return OK;
     }
 
-char **make_lines_ptr(text *text_p)
+error_t lines_partition(Text *text)
     {
-    assert(text_p != NULL);
+    assert(text      != NULL);
+    assert(text->buf != NULL);
 
-    text_p->line_count = lines_count(text_p->buf);
+    text->n_lines = lines_count(text->buf) + 1;
 
-    // Освобождаем буффер, если он занят, выделяем под него память.
-    if (text_p->lines != nullptr)
+    text->lines = (char**) malloc((text->n_lines + 1) * sizeof(char*));
+    if (text->lines == NULL)
         {
-        free(text_p->lines);
-        }
-    text_p->lines = (char**) malloc((text_p->line_count + 1) * sizeof(char*));
-    if (text_p->lines == nullptr)
-        {
-        printf("ERROR: cannot allocate memory");
-        free(text_p->lines);
-        return nullptr;
+        perror("ERROR: cannot allocate memory");
+        return ALLOCATION_ERROR;
         }
 
-    // Заполняем буфер символами.
-    text_p->lines = fill_line_buf(text_p);
+    if (fill_lines(text))
+        {
+        perror("ERROR: buffer overflow");
+        return BUFFER_OVERFLOW_ERROR;
+        }
 
-    return text_p->lines;
+    return OK;
     }
 
-char **fill_line_buf(text *text_p)
+error_t fill_lines(Text *text)
     {
-    assert(text_p != NULL);
+    assert(text        != NULL);
+    assert(text->buf   != NULL);
+    assert(text->lines != NULL);
 
-    char **line = text_p->lines;
-    char *buf = text_p->buf;
+    char **line = text->lines;
+    char *buf   = text->buf;
     *line++ = buf;
-    size_t sym = 0;
 
-    for (; *buf != '\0'; buf++, sym++)
+    for (; *buf != '\0'; buf++)
         {
+        if (buf - text->buf > text->buf_size)
+            {
+            return BUFFER_OVERFLOW_ERROR;
+            }
+        if (line - text->lines > text->n_lines)
+            {
+            return BUFFER_OVERFLOW_ERROR;
+            }
         if (*buf == '\n')
             {
             *buf = '\0';
@@ -110,40 +129,39 @@ char **fill_line_buf(text *text_p)
         }
     *line = nullptr;
 
-    return text_p->lines;
+    return OK;
     }
 
-
-size_t print_text(text* text_p)
+error_t text_to_file(Text* text, FILE* fp)
     {
-    assert(text_p != NULL);
+    assert(text != NULL);
+    assert(fp   != NULL);
 
-    char** line = text_p->lines;
-    size_t count = 0;
+    char** line = text->lines;
 
-    for (;*line != nullptr; line++, count++)
-        {
-        printf("%s \n", *line);
-        }
-
-    return count;
-    }
-
-size_t text_to_file(text* text_p, const char* file_name)
-    {
-    assert(text_p != NULL);
-
-    FILE *fp = fopen(file_name, "w");
-
-    char** line = text_p->lines;
-    size_t count = 0;
-
-    for (;*line != nullptr; line++, count++)
+    for (; *line != NULL; line++)
         {
         fprintf(fp, "%s \n", *line);
         }
 
+    return OK;
+    }
+
+error_t print_text(Text* text, const char* file_name)
+    {
+    assert(text        != NULL);
+    assert(text->buf   != NULL);
+    assert(text->lines != NULL);
+
+    if (file_name == NULL)
+        {
+        text_to_file(text);
+        return OK;
+        }
+
+    FILE *fp = fopen(file_name, "w");
+    text_to_file(text, fp);
     fclose(fp);
 
-    return count;
+    return OK;
     }

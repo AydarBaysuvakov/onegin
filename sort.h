@@ -1,12 +1,16 @@
-int linecmp(const char *lhs, const char *rhs);
+#ifndef __SORT__
+#define __SORT__
 
-int lencmp(const char *lhs, const char *rhs);
+int linecmp(const void *lhs, const void *rhs);
 
-int epicmp(const char *lhs, const char *rhs);
+int lencmp(const void *lhs, const void *rhs);
 
-void linesort(char **lines, size_t count, int (*comp)(const char *, const char *));
+int epigraph_cmp(const void *lhs, const void *rhs);
 
-void bubblesort(char **lines, size_t count, int (*comp)(const char *, const char *));
+void sort_lines(void **lines, size_t count, size_t size, int (*comp)(const void *, const void *));
 
-void swap(char **a, char **b);
+void bubblesort(void **lines, size_t count, size_t size, int (*comp)(const void *, const void *));
 
+void swap(void *a, void *b, size_t size);
+
+#endif //__SORT__
